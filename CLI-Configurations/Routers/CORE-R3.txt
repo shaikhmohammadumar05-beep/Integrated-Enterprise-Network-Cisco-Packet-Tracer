@@ -1,0 +1,66 @@
+enable
+configure terminal
+hostname CORE-R3
+no ip domain-lookup
+service password-encryption
+enable secret Cisco@123
+username admin secret Admin@123
+ip domain-name company.local
+line console 0
+ password Console@123
+ login
+ logging synchronous
+ exit
+banner motd #Authorized access only#
+!
+! ===== INTERFACES =====
+interface Serial1/0
+ description Link to MAIN-R1 Serial1/2
+ ip address 100.1.0.10 255.255.255.252
+ no shutdown
+ exit
+interface Serial1/1
+ description Link to COL-R1 Serial1/0
+ ip address 100.1.0.53 255.255.255.252
+ clock rate 64000
+ no shutdown
+ exit
+interface Serial1/2
+ description Link to COL-R2 Serial1/0
+ ip address 100.1.0.57 255.255.255.252
+ clock rate 64000
+ no shutdown
+ exit
+interface Serial1/3
+ description Link to COL-R3 Serial1/0
+ ip address 100.1.0.61 255.255.255.252
+ clock rate 64000
+ no shutdown
+ exit
+!
+! ===== OSPF =====
+router ospf 1
+ router-id 1.1.1.4
+ log-adjacency-changes
+ network 100.1.0.8 0.0.0.3 area 0
+ network 100.1.0.52 0.0.0.3 area 0
+ network 100.1.0.56 0.0.0.3 area 0
+ network 100.1.0.60 0.0.0.3 area 0
+ exit
+!
+! ===== STATIC ROUTES (floating, AD 200 = backup to OSPF) =====
+ip route 10.0.0.0 255.0.0.0 100.1.0.9 200
+ip route 100.0.0.0 255.0.0.0 100.1.0.9 200
+ip route 10.4.0.0 255.255.255.192 100.1.0.54 200
+ip route 10.4.0.64 255.255.255.192 100.1.0.58 200
+ip route 10.4.0.128 255.255.255.192 100.1.0.62 200
+!
+! ===== SSH =====
+crypto key generate rsa general-keys modulus 1024
+ip ssh version 2
+line vty 0 4
+ login local
+ transport input ssh
+ exit
+end
+write memory

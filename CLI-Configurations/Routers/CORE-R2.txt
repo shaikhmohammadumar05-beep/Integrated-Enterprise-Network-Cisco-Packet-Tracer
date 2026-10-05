@@ -1,0 +1,82 @@
+enable
+configure terminal
+hostname CORE-R2
+no ip domain-lookup
+service password-encryption
+enable secret Cisco@123
+username admin secret Admin@123
+ip domain-name company.local
+line console 0
+ password Console@123
+ login
+ logging synchronous
+ exit
+banner motd #Authorized access only#
+!
+! ===== INTERFACES =====
+interface Serial1/0
+ description Link to MAIN-R1 Serial1/1
+ ip address 100.1.0.6 255.255.255.252
+ no shutdown
+ exit
+interface Serial1/1
+ description Link to BO-R2 Serial1/0
+ ip address 100.1.0.33 255.255.255.252
+ clock rate 64000
+ no shutdown
+ exit
+interface Serial1/2
+ description Link to BO-R3 Serial1/0
+ ip address 100.1.0.37 255.255.255.252
+ clock rate 64000
+ no shutdown
+ exit
+interface Serial1/3
+ description Link to SCH-R1 Serial1/0
+ ip address 100.1.0.41 255.255.255.252
+ clock rate 64000
+ no shutdown
+ exit
+interface Serial1/4
+ description Link to SCH-R2 Serial1/0
+ ip address 100.1.0.45 255.255.255.252
+ clock rate 64000
+ no shutdown
+ exit
+interface Serial1/5
+ description Link to SCH-R3 Serial1/0
+ ip address 100.1.0.49 255.255.255.252
+ clock rate 64000
+ no shutdown
+ exit
+!
+! ===== OSPF =====
+router ospf 1
+ router-id 1.1.1.3
+ log-adjacency-changes
+ network 100.1.0.4 0.0.0.3 area 0
+ network 100.1.0.32 0.0.0.3 area 0
+ network 100.1.0.36 0.0.0.3 area 0
+ network 100.1.0.40 0.0.0.3 area 0
+ network 100.1.0.44 0.0.0.3 area 0
+ network 100.1.0.48 0.0.0.3 area 0
+ exit
+!
+! ===== STATIC ROUTES (floating, AD 200 = backup to OSPF) =====
+ip route 10.0.0.0 255.0.0.0 100.1.0.5 200
+ip route 100.0.0.0 255.0.0.0 100.1.0.5 200
+ip route 10.2.0.64 255.255.255.192 100.1.0.34 200
+ip route 10.2.0.128 255.255.255.192 100.1.0.38 200
+ip route 10.3.0.0 255.255.255.192 100.1.0.42 200
+ip route 10.3.0.64 255.255.255.192 100.1.0.46 200
+ip route 10.3.0.128 255.255.255.192 100.1.0.50 200
+!
+! ===== SSH =====
+crypto key generate rsa general-keys modulus 1024
+ip ssh version 2
+line vty 0 4
+ login local
+ transport input ssh
+ exit
+end
+write memory

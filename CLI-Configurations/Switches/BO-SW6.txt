@@ -1,0 +1,43 @@
+enable
+configure terminal
+hostname BO-SW6
+no ip domain-lookup
+service password-encryption
+enable secret Cisco@123
+username admin secret Admin@123
+ip domain-name company.local
+line console 0
+ password Console@123
+ login
+ logging synchronous
+ exit
+banner motd #Authorized access only#
+!
+! ===== STP =====
+spanning-tree mode rapid-pvst
+spanning-tree vlan 1 root primary
+!
+! ===== PORTS (single VLAN 1 per switch; all 24 FE ports are access ports) =====
+interface range FastEthernet0/1 - 24
+ switchport mode access
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ exit
+!
+! ===== MANAGEMENT =====
+interface vlan 1
+ description Management
+ ip address 10.2.0.162 255.255.255.224
+ no shutdown
+ exit
+ip default-gateway 10.2.0.161
+!
+! ===== SSH =====
+crypto key generate rsa general-keys modulus 1024
+ip ssh version 2
+line vty 0 15
+ login local
+ transport input ssh
+ exit
+end
+write memory

@@ -1,0 +1,72 @@
+enable
+configure terminal
+hostname SCH-R1
+no ip domain-lookup
+service password-encryption
+enable secret Cisco@123
+username admin secret Admin@123
+ip domain-name company.local
+line console 0
+ password Console@123
+ login
+ logging synchronous
+ exit
+banner motd #Authorized access only#
+!
+! ===== INTERFACES =====
+interface FastEthernet0/0
+ description LAN-A to SCH-SW1
+ ip address 10.3.0.1 255.255.255.224
+ no shutdown
+ exit
+interface FastEthernet0/1
+ description LAN-B to SCH-SW2
+ ip address 10.3.0.33 255.255.255.224
+ no shutdown
+ exit
+interface Serial1/0
+ description Link to CORE-R2 Serial1/3
+ ip address 100.1.0.42 255.255.255.252
+ no shutdown
+ exit
+!
+! ===== DHCP =====
+ip dhcp excluded-address 10.3.0.1 10.3.0.9
+ip dhcp excluded-address 10.3.0.33 10.3.0.41
+ip dhcp pool SCH-R1-LAN-A
+ network 10.3.0.0 255.255.255.224
+ default-router 10.3.0.1
+ dns-server 10.3.0.35
+ domain-name school.local
+ exit
+ip dhcp pool SCH-R1-LAN-B
+ network 10.3.0.32 255.255.255.224
+ default-router 10.3.0.33
+ dns-server 10.3.0.35
+ domain-name school.local
+ exit
+!
+! ===== OSPF =====
+router ospf 1
+ router-id 1.1.1.12
+ log-adjacency-changes
+ passive-interface FastEthernet0/0
+ passive-interface FastEthernet0/1
+ network 100.1.0.40 0.0.0.3 area 0
+ network 10.3.0.0 0.0.0.31 area 3
+ network 10.3.0.32 0.0.0.31 area 3
+ exit
+!
+! ===== STATIC ROUTES (floating, AD 200 = backup to OSPF) =====
+ip route 10.0.0.0 255.0.0.0 100.1.0.41 200
+ip route 100.0.0.0 255.0.0.0 100.1.0.41 200
+!
+! ===== SSH =====
+crypto key generate rsa general-keys modulus 1024
+ip ssh version 2
+line vty 0 4
+ login local
+ transport input ssh
+ exit
+end
+write memory

@@ -1,0 +1,97 @@
+enable
+configure terminal
+hostname CORE-R1
+no ip domain-lookup
+service password-encryption
+enable secret Cisco@123
+username admin secret Admin@123
+ip domain-name company.local
+line console 0
+ password Console@123
+ login
+ logging synchronous
+ exit
+banner motd #Authorized access only#
+!
+! ===== INTERFACES =====
+interface Serial1/0
+ description Link to MAIN-R1 Serial1/0
+ ip address 100.1.0.2 255.255.255.252
+ no shutdown
+ exit
+interface Serial1/1
+ description Link to HO-R1 Serial1/0
+ ip address 100.1.0.13 255.255.255.252
+ clock rate 64000
+ no shutdown
+ exit
+interface Serial1/2
+ description Link to HO-R2 Serial1/0
+ ip address 100.1.0.17 255.255.255.252
+ clock rate 64000
+ no shutdown
+ exit
+interface Serial1/3
+ description Link to HO-R3 Serial1/0
+ ip address 100.1.0.21 255.255.255.252
+ clock rate 64000
+ no shutdown
+ exit
+interface Serial1/4
+ description Link to HO-R4 Serial1/0
+ ip address 100.1.0.25 255.255.255.252
+ clock rate 64000
+ no shutdown
+ exit
+interface Serial1/5
+ description Link to BO-R1 Serial1/0
+ ip address 100.1.0.29 255.255.255.252
+ clock rate 64000
+ no shutdown
+ exit
+!
+! ===== OSPF =====
+router ospf 1
+ router-id 1.1.1.2
+ log-adjacency-changes
+ network 100.1.0.0 0.0.0.3 area 0
+ network 100.1.0.12 0.0.0.3 area 0
+ network 100.1.0.16 0.0.0.3 area 0
+ network 100.1.0.20 0.0.0.3 area 0
+ network 100.1.0.24 0.0.0.3 area 0
+ network 100.1.0.28 0.0.0.3 area 0
+ exit
+!
+! ===== STATIC ROUTES (floating, AD 200 = backup to OSPF) =====
+ip route 10.0.0.0 255.0.0.0 100.1.0.1 200
+ip route 100.0.0.0 255.0.0.0 100.1.0.1 200
+ip route 10.1.0.0 255.255.255.192 100.1.0.14 200
+ip route 10.1.0.64 255.255.255.192 100.1.0.18 200
+ip route 10.1.0.128 255.255.255.192 100.1.0.22 200
+ip route 10.1.0.192 255.255.255.192 100.1.0.26 200
+ip route 10.2.0.0 255.255.255.192 100.1.0.30 200
+!
+! ===== BGP (eBGP to Head Office routers) =====
+router bgp 65000
+ bgp router-id 1.1.1.2
+ bgp log-neighbor-changes
+ neighbor 100.1.0.14 remote-as 65001
+ neighbor 100.1.0.14 description eBGP-to-HO-R1
+ neighbor 100.1.0.18 remote-as 65001
+ neighbor 100.1.0.18 description eBGP-to-HO-R2
+ neighbor 100.1.0.22 remote-as 65001
+ neighbor 100.1.0.22 description eBGP-to-HO-R3
+ neighbor 100.1.0.26 remote-as 65001
+ neighbor 100.1.0.26 description eBGP-to-HO-R4
+ network 100.0.0.0 mask 255.255.255.0
+ exit
+!
+! ===== SSH =====
+crypto key generate rsa general-keys modulus 1024
+ip ssh version 2
+line vty 0 4
+ login local
+ transport input ssh
+ exit
+end
+write memory
